@@ -5,7 +5,7 @@ import hikari
 import asyncio
 import uvloop
 
-from bot.model import Model
+from bot.model_wrapper.model import Model
 
 uvloop.install()
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
