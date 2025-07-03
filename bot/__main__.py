@@ -1,10 +1,14 @@
 import os
-
 import crescent
 import dotenv
 import hikari
+import asyncio
+import uvloop
 
 from bot.model import Model
+
+uvloop.install()
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 dotenv.load_dotenv()
 
