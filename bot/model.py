@@ -1,9 +1,13 @@
 import hikari
+import dataclasses
+import miru
 
+@dataclasses.dataclass
+class MyModel:
+    miru: miru.Client
 
-class Model:
-    def __init__(self) -> None:
-        ...
+    #def __init__(self) -> None:
+    #    ...
 
     async def on_start(self, _: hikari.StartedEvent) -> None:
         """
