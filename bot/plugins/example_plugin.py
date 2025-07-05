@@ -13,10 +13,14 @@ plugin = crescent.Plugin[hikari.GatewayBot, MyModel]()
 
 os.chdir(f"{os.getcwd()}/bot/plugins")
 
-# Define a new custom View that contains 3 items
-class BasicView(miru.View):
+# view with crescent context passed for additional utility
+class ContextView(miru.View):
+    def __init__(self, ctx: crescent.Context, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.players = 0
+        self.crescent_ctx = ctx
 
-    # Define a new TextSelect menu with two options
+    # define a new TextSelect menu with two options (vestigal template that might be useful)
     @miru.text_select(
         placeholder="Select me!",
         options=[
@@ -27,21 +31,32 @@ class BasicView(miru.View):
     async def basic_select(self, ctx: miru.ViewContext, select: miru.TextSelect) -> None:
         await ctx.respond(f"You've chosen {select.values[0]}!")
 
-    # Define a new Button with the Style of success (Green)
-    @miru.button(label="Click me!", style=hikari.ButtonStyle.SUCCESS)
+    # join tea (TODO: once per user; currently inf per user)
+    @miru.button(label="Players: 0", style=hikari.ButtonStyle.PRIMARY)
     async def basic_button(self, ctx: miru.ViewContext, button: miru.Button) -> None:
-        await ctx.respond("You clicked me!")
+        self.players += 1
+        button.label = f"Players: {self.players}"
+        await ctx.edit_response(components=self)
+        await ctx.respond("Joined!", flags=hikari.MessageFlag.EPHEMERAL)
 
-    # Define a new Button that when pressed will stop the view
-    # & invalidate all the buttons in this view
-    @miru.button(label="Stop me!", style=hikari.ButtonStyle.DANGER)
+    # cancel view
+    @miru.button(label="Abort!", style=hikari.ButtonStyle.DANGER)
     async def stop_button(self, ctx: miru.ViewContext, button: miru.Button) -> None:
-        self.stop()  # Called to stop the view
+        await ctx.respond("The host has aborted.")
+        self.stop()
+
+    async def on_timeout(self) -> None:
+        # no interactions so no ctx available to respond with...
+        if self.players == 0:
+            # ...thus, moderate scuff
+            await self.crescent_ctx.respond("Nobody joined? How drab...")
+            return None
+        await self.message.respond(f"It seems {self.players} player(s) were interested.")
 
 @plugin.include
 @crescent.command
 async def ping(ctx: crescent.Context) -> None:
-    view = BasicView()
+    view = ContextView(ctx, timeout=3.0)
     await ctx.respond("Pong!", components=view)
     ctx.client.model.miru.start_view(view)
 
