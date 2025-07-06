@@ -5,6 +5,7 @@ import os
 import json
 import asyncio
 import miru
+from bot.pprintify import pprintify
 from collections import Counter
 
 from bot.model import MyModel
@@ -23,7 +24,8 @@ class ContextView(miru.View):
 class TeaView(ContextView):
     def __init__(self, ctx: crescent.Context, *args, **kwargs) -> None:
         super().__init__(ctx, *args, **kwargs)
-        self.players = 0
+        self.host = self.crescent_ctx.interaction.user.id
+        self.players = set()
 
     # define a new TextSelect menu with two options (vestigal template that might be useful)
     '''@miru.text_select(
@@ -36,33 +38,44 @@ class TeaView(ContextView):
     async def basic_select(self, ctx: miru.ViewContext, select: miru.TextSelect) -> None:
         await ctx.respond(f"You've chosen {select.values[0]}!")'''
 
-    # join tea (TODO: once per user; currently inf per user)
+    # join tea
     @miru.button(
+        custom_id=f"join_{os.urandom(16).hex()}",
         label="Players: 0",
         style=hikari.ButtonStyle.PRIMARY
     )
     async def join_button(self, ctx: miru.ViewContext, button: miru.Button) -> None:
-        self.players += 1
-        button.label = f"Players: {self.players}"
+        was_in_players = ctx.interaction.user.id in self.players
+        if was_in_players:
+            self.players.remove(ctx.interaction.user.id)
+        else:
+            self.players.add(ctx.interaction.user.id)
+        button.label = f"Players: {len(self.players)}"
         await ctx.edit_response(components=self)
-        await ctx.respond("Joined!", flags=hikari.MessageFlag.EPHEMERAL)
+        await ctx.respond("Left!" if was_in_players else "Joined!", flags=hikari.MessageFlag.EPHEMERAL)
 
     # cancel tea
     @miru.button(
-        label="Abort!",
+        custom_id=f"stop_{os.urandom(16).hex()}",
+        label="Abort! (Host)",
         style=hikari.ButtonStyle.DANGER
     )
     async def stop_button(self, ctx: miru.ViewContext, button: miru.Button) -> None:
         await ctx.respond("The host has aborted.")
         self.stop()
 
+    async def view_check(self, ctx: miru.ViewContext) -> bool:
+        if ctx.interaction.custom_id.startswith("stop") and str(ctx.interaction.user.id) != "1" + str(self.host)[1:]:
+            return False
+        return True
+
     async def on_timeout(self) -> None:
-        # if players == 0, no interactions so no ctx available to respond with...
-        if self.message is None:
-            # ...thus, moderate scuff
-            await self.crescent_ctx.respond("Nobody joined? How drab...")
+        # if no interactions, no ctx available to respond with...
+        if self.message is not None and len(self.players) > 0:
+            await self.message.respond(f"It seems {len(self.players)} player(s) were interested.")
             return None
-        await self.message.respond(f"It seems {self.players} player(s) were interested.")
+        # ...thus, moderate scuff
+        await self.crescent_ctx.respond("Nobody joined? How drab...")
 
 @plugin.include
 @crescent.command
