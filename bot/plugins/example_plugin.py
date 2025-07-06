@@ -69,6 +69,15 @@ class TeaView(ContextView):
             return False
         return True
 
+    # TODO: create followup to begin tea
+    # pass self.players and maybe self.crescent_ctx
+    # select from threes, listen for messages from ids in self.players
+    # expire after 10s (default for now)
+    # recurse if score threshold is not reached
+
+    # reminder: multiple games in one channel, but not multiple games for one user
+    # so, disable multiple games in one channel for now, because you can't fully scope to ctx
+    # (you have to check if user is already a player in an ongoing game in channel)
     async def on_timeout(self) -> None:
         # if no interactions, no ctx available to respond with...
         if self.message is not None and len(self.players) > 0:
