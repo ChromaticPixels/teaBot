@@ -65,7 +65,7 @@ class TeaView(ContextView):
         self.stop()
 
     async def view_check(self, ctx: miru.ViewContext) -> bool:
-        if ctx.interaction.custom_id.startswith("stop") and str(ctx.interaction.user.id) != "1" + str(self.host)[1:]:
+        if ctx.interaction.custom_id.startswith("stop") and ctx.interaction.user.id != self.host:
             return False
         return True
 
